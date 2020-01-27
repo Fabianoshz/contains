@@ -1,2 +1,3 @@
-# Create
-ip netns add contains
+# Add nameserver
+echo 'nameserver 8.8.8.8' > /etc/resolv.conf
+

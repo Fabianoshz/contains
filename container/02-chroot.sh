@@ -15,14 +15,8 @@ ps ax -o pid,ppid,pidns,cmd --forest
 # Mount /proc
 # We can't see the running procceses, because they depend on /proc
 # structure. Since we don't have one for our proccess, let's try
-# to mount host one.
-sudo mount -t proc proc /proc
+# to mount a new one.
+mount -t proc none /proc
 
 # Check proccesses again.
 sudo ps ax -o pid,ppid,pidns,cmd --forest
-
-# Umount /proc
-sudo umount /proc
-
-# Check network
-ip address
