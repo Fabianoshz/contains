@@ -25,5 +25,5 @@ echo 100000000 > /sys/fs/cgroup/memory/contains/memory.limit_in_bytes
 echo 0 > /sys/fs/cgroup/memory/contains/memory.swappiness
 
 # Add proccess to cgroups
-echo 93059 > /sys/fs/cgroup/cpu/contains/cgroup.procs
-echo 93059 > /sys/fs/cgroup/memory/contains/cgroup.procs
+echo <pid> > /sys/fs/cgroup/cpu/contains/cgroup.procs
+echo <pid> > /sys/fs/cgroup/memory/contains/cgroup.procs

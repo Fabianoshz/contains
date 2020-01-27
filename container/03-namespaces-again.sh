@@ -1,2 +1,2 @@
 # Namespaced system
-sudo unshare --mount --uts --ipc --net --pid --fork --cgroup chroot system-root
+sudo unshare --mount --uts --ipc --net --pid --cgroup --fork chroot system-root
