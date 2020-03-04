@@ -254,9 +254,9 @@ First, let's clear the change that we made to the jail and leave it.
 
 Then we're going to use unshare, an application made for dealing with namespaces.
 
-. . .
+    sudo unshare --mount --uts --ipc --net --pid --cgroup --fork chroot system-root bin/bash
 
-    sudo unshare --mount --uts --ipc --net --pid --cgroup --fork chroot system-root
+. . .
 
 Now, let's mount our empty /proc structure
 
@@ -314,7 +314,7 @@ Then for memory:
 
 And then limit the memory amount for our newly created cgroup. Let's also remove swappiness so we can test the memory allocation later on.
 
-    echo 100000000 | sudo tee /sys/fs/cgroup/memory/contains/memory.limit_in_bytes
+    echo 10000000 | sudo tee /sys/fs/cgroup/memory/contains/memory.limit_in_bytes
     echo 0 | sudo tee /sys/fs/cgroup/memory/contains/memory.swappiness
 
 . . .
@@ -323,3 +323,52 @@ Finally, let's add our container to our cgroup:
     
     echo $(pgrep 'bash') | sudo tee /sys/fs/cgroup/cpu/contains/cgroup.procs
     echo $(pgrep 'bash') | sudo tee /sys/fs/cgroup/memory/contains/cgroup.procs
+
+## Container from scratch. Test cgroups
+
+It's a little more hard to test CPU than it's to test memory, so to get to our point quicker, we are going to test if our process is really bound to it's group resource limit.
+
+## Container from scratch. Network namespace
+
+Let's check whats going to happen if we try to reach the internet from our container.
+
+    ping google.com
+
+. . .
+
+    ping: google.com: Temporary failure in name resolution
+
+. . .
+
+Ops! Looks like we have not DNS server, let's fix this:
+
+    echo 'nameserver 8.8.8.8' > /etc/resolv.conf
+
+. . .
+
+And we also need to create a virtual interface from the host, a virtual interface has 2 sides, we are going to call one side 'host' and the other one 'container'.
+
+    sudo ip link add name host type veth peer name container
+
+. . .
+
+
+Now, let's move the 'container' side from the virtual interface to the container net namespace.
+
+    sudo ip link set container netns $(pgrep 'bash')
+
+. . .
+
+
+Virtual interfaces come disabled, let's turn on the host side.
+
+    sudo ip link set host up
+    sudo ip add add 10.1.0.1/24 dev host
+
+. . .
+
+Then the container side (we also add the default root pointing to this interface)
+
+    ip link set container up
+    ip add add 10.1.0.2/24 dev container
+    ip route add default via 10.1.0.1
