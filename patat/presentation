@@ -11,7 +11,7 @@ patat:
 ## What containers are not.
 
 > * They are not emulation;
-> * Containers are not VMs (they are as much isolated as you define);
+> * Containers are not VMs (different from VMs they are as much isolated as you define);
 > * They are not an engine (altough we might use one to manage them).
 
 # What a container is?
@@ -22,52 +22,49 @@ A container is about isolating a process within certains host resources.
 
 . . .
 
-And this is done by the linux kernel, in each of its subsystems.
+And this is done by the linux kernel, in each of its subsystems. Using namespaces and cgroups, here are the namespaces:
 
-. . . 
-
-Let's remember some of them:
-
-> * Memory
-> * CPU
-> * Filesystem
-
-## Since we are using a linux machine, we can see some of this in action, let's take a look at the processes namespaces.
-
-. . . 
-
-    sudo ps ax -o pid,ppid,pidns,cmd --forest
-
-. . . 
-
-    PID    PPID      PIDNS CMD
-    [...]
-      1       0 4026531836 /sbin/init splash
-    325       1 4026531836 /usr/lib/systemd/systemd-journald1
-    332       1 4026531836 /usr/bin/lvmetad -f1
-    341       1 4026531836 /usr/lib/systemd/systemd-udevd1
-    421       1 4026531836 /usr/lib/systemd/systemd-timesyncd1
-    478       1 4026531836 /usr/bin/bumblebeed1
-    479       1 4026531836 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only1
-    480       1 4026531836 /usr/bin/NetworkManager --no-daemon1
-    505       1 4026531836 /usr/lib/systemd/systemd-logind1
-    524       1 4026531836 /usr/bin/wpa_supplicant -u -s -O /run/wpa_supplicant1
-    529       1 4026531836 /usr/bin/sddm1
-    531     529 4026531836  \_ /usr/lib/Xorg -nolisten tcp -auth /var/run/sddm/{c3b90c51-25fb-41ad-8a41-c4fbb9073d24} -background none -noreset -displayfd 17 -seat seat0 vt11
-    610     529 4026531836  \_ /usr/lib/sddm/sddm-helper --socket /tmp/sddm-auth950ddf17-00b2-4a57-a9b7-4f9f1e35321e --id 1 --start /usr/bin/startplasma-x11 --user fabiano1
-    622     610 4026531836      \_ /usr/bin/startplasma-x111
-    666     622 4026531836          \_ /usr/bin/plasma_session1
-    562       1 4026531836 /usr/lib/udisks2/udisksd1
-    566       1 4026531836 /usr/lib/polkit-1/polkitd --no-debug1
-    582       1 4026531836 /usr/lib/upowerd1
-    614       1 4026531836 /usr/lib/systemd/systemd --user1
-    [...]
+    Mount (mnt)
+        - Filesystem mounting management
+    
+    Process ID (pid)
+        - PID isolation
+    
+    Network (net)
+        - Networking isolation
+    
+    Interprocess Communication (ipc)
+        - Process communication, share of data and events.
+    
+    UTS
+        - System identification
+    
+    User ID (user)
+        - Permission administration
+    
+    Control group (cgroup)
+        - Resource usage control
 
 . . .
-    
-Mind the column PIDNS which describe the process namespace ID in the process subsystem.
 
-## But we have a lot of subsystems, and we can check which namespaces a process has for each of the available subsystems.
+A host system can have many of each namespaces, and each process can only see and use resources of that specific namespace.
+
+. . .
+
+Let's say we have the process 'ls' and 'cat', each on a different 'mnt' namespace:
+
+* ls -> mnt:[1111111111]
+* cat -> mnt:[2222222222]
+
+. . .
+
+Even if we run this with the same arguments, let's say 'file', we are going access different files.
+
+# Namespaces
+
+## Namespaces.
+
+Each proccess its bound to a namespace of each type (mnt, pid, net, etc...), and we can check which namespaces a process has by accessing the '/proc' system.
 
 . . .
 
@@ -87,13 +84,58 @@ Mind the column PIDNS which describe the process namespace ID in the process sub
 
 . . .
 
+Let's take 'net' for instance:
+
+    lrwxrwxrwx 1 root root 0 fev  3 00:15 net -> 'net:[4026532008]'
+
+A package for a address inside the 'net' namespace with the ID '4026531836' can't see or access any package within the '9999999999' net namespace.
+
+## Namespaces.
+
+Since we are using a linux machine, we can see some of this in action, let's take a look at the processes namespaces.
+
+. . . 
+
+    sudo ps ax -o pid,ppid,pidns,cmd --forest
+
+. . . 
+
+    PID    PPID      PIDNS CMD
+    [...]
+      1       0 4026531836 /sbin/init splash
+    325       1 4026531836 /usr/lib/systemd/systemd-journald1
+    332       1 4026531836 /usr/bin/lvmetad -f1
+    341       1 4026531836 /usr/lib/systemd/systemd-udevd1
+    421       1 4026531836 /usr/lib/systemd/systemd-timesyncd1
+    478       1 4026531836 /usr/bin/bumblebeed1
+    479       1 4026531836 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation -
+    480       1 4026531836 /usr/bin/NetworkManager --no-daemon1
+    505       1 4026531836 /usr/lib/systemd/systemd-logind1
+    524       1 4026531836 /usr/bin/wpa_supplicant -u -s -O /run/wpa_supplicant1
+    529       1 4026531836 /usr/bin/sddm1
+    531     529 4026531836  \_ /usr/lib/Xorg -nolisten tcp -auth /var/run/sddm/{c3b90c51-25fb-41ad-8a41-c4fbb9073d24} -
+    610     529 4026531836  \_ /usr/lib/sddm/sddm-helper --socket /tmp/sddm-auth950ddf17-00b2-4a57-a9b7-4f9f1e35321e --
+    622     610 4026531836      \_ /usr/bin/startplasma-x111
+    666     622 4026531836          \_ /usr/bin/plasma_session1
+    562       1 4026531836 /usr/lib/udisks2/udisksd1
+    566       1 4026531836 /usr/lib/polkit-1/polkitd --no-debug1
+    582       1 4026531836 /usr/lib/upowerd1
+    614       1 4026531836 /usr/lib/systemd/systemd --user1
+    [...]
+
+. . .
+    
+Mind the column PIDNS which describes the namespace ID within in the PID namespace. Each namespace has its own ID, which we can use to move processes to it.
+
 # Enough talk, let's make a container from scratch!
 
-## First thing we need is the files for the system.
+## Container from scratch. OS files.
+
+First thing we need is the files for the operational system.
 
 . . .
 
-Each linux system has it own way of bootstrapping the OS files. We are going to use Arch pacstrap. Which will download everything we need to have a minimal Arch Linux system.
+Each linux system has it own way of bootstrapping the OS files. We are going to use Arch pacstrap (because Arch rocks). Which will download everything we need to have a minimal Arch Linux system.
 
 . . .
 
@@ -104,11 +146,11 @@ Each linux system has it own way of bootstrapping the OS files. We are going to 
     ==> Creating install root at system-root
     ==> Installing packages to system-root
     :: Synchronizing package databases...
-    core                                                                                                       133,5 KiB   193 KiB/s 00:01 [#####################################################################################] 100%
-    extra                                                                                                     1640,3 KiB   387 KiB/s 00:04 [#####################################################################################] 100%
-    community                                                                                                    4,8 MiB   383 KiB/s 00:13 [#####################################################################################] 100%
-    archlinuxfr                                                                                                  9,4 KiB   284 KiB/s 00:00 [#####################################################################################] 100%
-    multilib                                                                                                   161,8 KiB   462 KiB/s 00:00 [#####################################################################################] 100%
+    core                         133,5 KiB   193 KiB/s 00:01 [###################################################] 100%
+    extra                       1640,3 KiB   387 KiB/s 00:04 [###################################################] 100%
+    community                      4,8 MiB   383 KiB/s 00:13 [###################################################] 100%
+    archlinuxfr                    9,4 KiB   284 KiB/s 00:00 [###################################################] 100%
+    multilib                     161,8 KiB   462 KiB/s 00:00 [###################################################] 100%
     
     [...]
 
@@ -129,7 +171,11 @@ Each linux system has it own way of bootstrapping the OS files. We are going to 
     (11/12) Updating the info directory file...
     (12/12) Rebuilding certificate stores...
 
-## Now that we have our system files, we can change our root filesystem to it. That way we can have what we call a jail. The running process can't access the host files.
+## Container from scratch. Exploring the jail.
+
+Now that we have our system files, we can change our root filesystem to it. That way we can have what we call a jail. The running process can't access any file above the filesystem tree (in our case the host files).
+
+. . . 
 
     sudo chroot system-root
 
@@ -151,12 +197,9 @@ Now let's check the running processes:
 
     Error, do this: mount -t proc proc /proc
 
-. . . 
+## Container from scratch. Procceses inside the jail.
 
-Wait, what?
-
-
-## We can't see the running procceses, because they depend on /proc structure. Since we don't have one for our proccess we should mount a new and empty one, which the kernel will fill with the processes informations.
+We can't see the running procceses, because they depend on /proc structure. Since we don't have one for our jail we should mount a new and empty one, which the kernel will fill with the processes informations.
 
 . . .
 
@@ -193,19 +236,35 @@ Now let's check the running processes again:
     614       1 4026531836 /usr/lib/systemd/systemd --user1
     [...]
 
-# But why do we see the host procceses?
+## Container from scratch. Namespaces
 
-# Because we still not using namespaces, only jail. So let's do it.
-
-## We are going to use unshare, an application made for dealing with namespaces.
+But why do we see the host procceses?
 
 . . .
 
-    sudo unshare --uts --ipc --net --pid --cgroup --fork chroot system-root
+Because we still not using namespaces, only jail (remember, namespaces deals with isolation in all OS aspects). So let's add namespaces to the mix.
 
 . . .
 
-Now, let's check the procceses one more time:
+First, let's clear the change that we made to the jail and leave it.
+
+    sudo umount /proc && exit
+
+. . .
+
+Then we're going to use unshare, an application made for dealing with namespaces.
+
+. . .
+
+    sudo unshare --mount --uts --ipc --net --pid --cgroup --fork chroot system-root
+
+Now, let's mount our empty /proc structure
+
+    mount -t proc none /proc
+
+. . .
+
+Finally, let's check the procceses one more time:
 
 . . .
 
@@ -217,3 +276,50 @@ Now, let's check the procceses one more time:
     PID    PPID      PIDNS CMD
     1       0 4026532738 /bin/bash -i
     6       1 4026532738 ps ax -o pid,ppid,pidns,cmd --forest
+
+## Container from scratch. Cgroups (when things start to get exciting)
+
+Now we are going to dive a little deeper on cgroups, which is responsible for resource limiting, on the host we are going to create a new cgroup for CPU and memory, we  basically need to create a new directoy and the kernel will fill it with the required files.
+
+. . .
+
+First for CPU:
+
+    sudo mkdir /sys/fs/cgroup/cpu/contains
+
+    sudo ls /sys/fs/cgroup/cpu/contains
+
+. . .
+
+We can check the current CPU resource limitation:
+
+    sudo cat /sys/fs/cgroup/cpu/contains/cpu.cfs_period_us
+    sudo cat /sys/fs/cgroup/cpu/contains/cpu.cfs_quota_us
+
+. . .
+
+Now let's limit our cgroup CFS quota.
+
+    echo 50000 | sudo tee /sys/fs/cgroup/cpu/contains/cpu.cfs_quota_us
+
+. . .
+
+Then for memory:
+
+    sudo mkdir /sys/fs/cgroup/memory/contains
+
+    sudo ls /sys/fs/cgroup/memory/contains
+
+. . .
+
+And then limit the memory amount for our newly created cgroup. Let's also remove swappiness so we can test the memory allocation later on.
+
+    echo 100000000 | sudo tee /sys/fs/cgroup/memory/contains/memory.limit_in_bytes
+    echo 0 | sudo tee /sys/fs/cgroup/memory/contains/memory.swappiness
+
+. . .
+
+Finally, let's add our container to our cgroup:
+    
+    echo $(pgrep 'bash') | sudo tee /sys/fs/cgroup/cpu/contains/cgroup.procs
+    echo $(pgrep 'bash') | sudo tee /sys/fs/cgroup/memory/contains/cgroup.procs
