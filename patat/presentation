@@ -1,0 +1,219 @@
+---
+title: Contains
+author: Fabiano Honorato
+patat:
+    wrap: true
+#    slideLevel: 1
+...
+
+# What containers are not.
+
+## What containers are not.
+
+> * They are not emulation;
+> * Containers are not VMs (they are as much isolated as you define);
+> * They are not an engine (altough we might use one to manage them).
+
+# What a container is?
+
+## What a container is?
+
+A container is about isolating a process within certains host resources.
+
+. . .
+
+And this is done by the linux kernel, in each of its subsystems.
+
+. . . 
+
+Let's remember some of them:
+
+> * Memory
+> * CPU
+> * Filesystem
+
+## Since we are using a linux machine, we can see some of this in action, let's take a look at the processes namespaces.
+
+. . . 
+
+    sudo ps ax -o pid,ppid,pidns,cmd --forest
+
+. . . 
+
+    PID    PPID      PIDNS CMD
+    [...]
+      1       0 4026531836 /sbin/init splash
+    325       1 4026531836 /usr/lib/systemd/systemd-journald1
+    332       1 4026531836 /usr/bin/lvmetad -f1
+    341       1 4026531836 /usr/lib/systemd/systemd-udevd1
+    421       1 4026531836 /usr/lib/systemd/systemd-timesyncd1
+    478       1 4026531836 /usr/bin/bumblebeed1
+    479       1 4026531836 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only1
+    480       1 4026531836 /usr/bin/NetworkManager --no-daemon1
+    505       1 4026531836 /usr/lib/systemd/systemd-logind1
+    524       1 4026531836 /usr/bin/wpa_supplicant -u -s -O /run/wpa_supplicant1
+    529       1 4026531836 /usr/bin/sddm1
+    531     529 4026531836  \_ /usr/lib/Xorg -nolisten tcp -auth /var/run/sddm/{c3b90c51-25fb-41ad-8a41-c4fbb9073d24} -background none -noreset -displayfd 17 -seat seat0 vt11
+    610     529 4026531836  \_ /usr/lib/sddm/sddm-helper --socket /tmp/sddm-auth950ddf17-00b2-4a57-a9b7-4f9f1e35321e --id 1 --start /usr/bin/startplasma-x11 --user fabiano1
+    622     610 4026531836      \_ /usr/bin/startplasma-x111
+    666     622 4026531836          \_ /usr/bin/plasma_session1
+    562       1 4026531836 /usr/lib/udisks2/udisksd1
+    566       1 4026531836 /usr/lib/polkit-1/polkitd --no-debug1
+    582       1 4026531836 /usr/lib/upowerd1
+    614       1 4026531836 /usr/lib/systemd/systemd --user1
+    [...]
+
+. . .
+    
+Mind the column PIDNS which describe the process namespace ID in the process subsystem.
+
+## But we have a lot of subsystems, and we can check which namespaces a process has for each of the available subsystems.
+
+. . .
+
+    sudo ls -ltrh /proc/1/ns/
+
+. . .
+
+    total 0
+    lrwxrwxrwx 1 root root 0 fev  3 00:15 uts -> 'uts:[4026531838]'
+    lrwxrwxrwx 1 root root 0 fev  3 00:15 user -> 'user:[4026531837]'
+    lrwxrwxrwx 1 root root 0 fev  3 00:15 pid_for_children -> 'pid:[4026531836]'
+    lrwxrwxrwx 1 root root 0 fev  3 00:15 pid -> 'pid:[4026531836]'
+    lrwxrwxrwx 1 root root 0 fev  3 00:15 net -> 'net:[4026532008]'
+    lrwxrwxrwx 1 root root 0 fev  3 00:15 mnt -> 'mnt:[4026531840]'
+    lrwxrwxrwx 1 root root 0 fev  3 00:15 ipc -> 'ipc:[4026531839]'
+    lrwxrwxrwx 1 root root 0 fev  3 00:15 cgroup -> 'cgroup:[4026531835]'
+
+. . .
+
+# Enough talk, let's make a container from scratch!
+
+## First thing we need is the files for the system.
+
+. . .
+
+Each linux system has it own way of bootstrapping the OS files. We are going to use Arch pacstrap. Which will download everything we need to have a minimal Arch Linux system.
+
+. . .
+
+    mkdir system-root && sudo pacstrap system-root base base-devel
+
+. . .
+
+    ==> Creating install root at system-root
+    ==> Installing packages to system-root
+    :: Synchronizing package databases...
+    core                                                                                                       133,5 KiB   193 KiB/s 00:01 [#####################################################################################] 100%
+    extra                                                                                                     1640,3 KiB   387 KiB/s 00:04 [#####################################################################################] 100%
+    community                                                                                                    4,8 MiB   383 KiB/s 00:13 [#####################################################################################] 100%
+    archlinuxfr                                                                                                  9,4 KiB   284 KiB/s 00:00 [#####################################################################################] 100%
+    multilib                                                                                                   161,8 KiB   462 KiB/s 00:00 [#####################################################################################] 100%
+    
+    [...]
+
+    error: command failed to execute correctly
+    ( 7/12) Reloading device manager configuration...
+    Running in chroot, ignoring request.
+    ( 8/12) Arming ConditionNeedsUpdate...
+    ( 9/12) Reloading system bus configuration...
+    Running in chroot, ignoring request: try-reload-or-restart
+    (10/12) Warn about old perl modules
+    perl: warning: Setting locale failed.
+    perl: warning: Please check that your locale settings:
+            LANGUAGE = "en_US",
+            LC_ALL = (unset),
+            LANG = "pt_BR.UTF-8"
+        are supported and installed on your system.
+    perl: warning: Falling back to the standard locale ("C").
+    (11/12) Updating the info directory file...
+    (12/12) Rebuilding certificate stores...
+
+## Now that we have our system files, we can change our root filesystem to it. That way we can have what we call a jail. The running process can't access the host files.
+
+    sudo chroot system-root
+
+. . . 
+
+    [root@StrikerEureka /]# ls
+    bin  boot  dev  etc  home  lib  lib64  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var
+    [root@StrikerEureka /]# 
+
+. . . 
+
+Now let's check the running processes:
+
+. . . 
+
+    ps ax -o pid,ppid,pidns,cmd --forest
+
+. . .
+
+    Error, do this: mount -t proc proc /proc
+
+. . . 
+
+Wait, what?
+
+
+## We can't see the running procceses, because they depend on /proc structure. Since we don't have one for our proccess we should mount a new and empty one, which the kernel will fill with the processes informations.
+
+. . .
+
+    mount -t proc none /proc
+
+. . .
+
+Now let's check the running processes again:
+
+    ps ax -o pid,ppid,pidns,cmd --forest
+
+. . .
+
+    PID    PPID      PIDNS CMD
+    [...]
+      1       0 4026531836 /sbin/init splash
+    325       1 4026531836 /usr/lib/systemd/systemd-journald1
+    332       1 4026531836 /usr/bin/lvmetad -f1
+    341       1 4026531836 /usr/lib/systemd/systemd-udevd1
+    421       1 4026531836 /usr/lib/systemd/systemd-timesyncd1
+    478       1 4026531836 /usr/bin/bumblebeed1
+    479       1 4026531836 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only1
+    480       1 4026531836 /usr/bin/NetworkManager --no-daemon1
+    505       1 4026531836 /usr/lib/systemd/systemd-logind1
+    524       1 4026531836 /usr/bin/wpa_supplicant -u -s -O /run/wpa_supplicant1
+    529       1 4026531836 /usr/bin/sddm1
+    531     529 4026531836  \_ /usr/lib/Xorg -nolisten tcp -auth /var/run/sddm/{c3b90c51-25fb-41ad-8a41-c4fbb9073d24} -background none -noreset -displayfd 17 -seat seat0 vt11
+    610     529 4026531836  \_ /usr/lib/sddm/sddm-helper --socket /tmp/sddm-auth950ddf17-00b2-4a57-a9b7-4f9f1e35321e --id 1 --start /usr/bin/startplasma-x11 --user fabiano1
+    622     610 4026531836      \_ /usr/bin/startplasma-x111
+    666     622 4026531836          \_ /usr/bin/plasma_session1
+    562       1 4026531836 /usr/lib/udisks2/udisksd1
+    566       1 4026531836 /usr/lib/polkit-1/polkitd --no-debug1
+    582       1 4026531836 /usr/lib/upowerd1
+    614       1 4026531836 /usr/lib/systemd/systemd --user1
+    [...]
+
+# But why do we see the host procceses?
+
+# Because we still not using namespaces, only jail. So let's do it.
+
+## We are going to use unshare, an application made for dealing with namespaces.
+
+. . .
+
+    sudo unshare --uts --ipc --net --pid --cgroup --fork chroot system-root
+
+. . .
+
+Now, let's check the procceses one more time:
+
+. . .
+
+    ps ax -o pid,ppid,pidns,cmd --forest
+
+. . .
+
+    [root@StrikerEureka /]# ps ax -o pid,ppid,pidns,cmd --forest
+    PID    PPID      PIDNS CMD
+    1       0 4026532738 /bin/bash -i
+    6       1 4026532738 ps ax -o pid,ppid,pidns,cmd --forest
