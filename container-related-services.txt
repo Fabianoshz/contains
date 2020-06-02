@@ -1,0 +1,60 @@
+Container engines:
+Docker - Most famous and very easy to use container engine.
+Kubernetes - Most famous container orchestration platform.
+Openshift - Container orchestration platform built on top of Kubernetes.
+Rancher - Kubernetes orchestrator
+Podman - Security focused container engine.
+Cri-o - Lightweight container runtime for kubernetes
+Containerd - Container engine
+LXC - Linux containerization service
+Anbox - Android system container
+
+Functions:
+Kubeless - Function as service inside Kubernetes
+Knative - Another function as service inside Kubernetes
+Fission - One more function as service inside Kubernetes!
+
+Machine Learning:
+Kubeflow - Complete Machine Learning platform built on top of Kubernetes.
+
+Container engine as a service:
+ECS - AWS container engine platform
+EKS - AWS managed Kubernetes
+GKE - GCP managed Kubernetes
+AKS - Azure managed Kubernetes
+
+Infrastructureless container as a service:
+Virtual kubelet - Kubelet interface to integrate Kubernetes to infrastructureless containers services
+Fargate - AWS managed infrastructureless container as a service
+ACI - Azure managed infrastructureless container as a service
+Cloud Run - GCP managed infrastructureless container as a service
+
+Container repositories:
+Dockerhub - Free containers repository
+ECR - AWS managed containers repository
+
+Containers specifications:
+OCI - Open Container Initiative container specifications, has a set of designs that drive most of container engines evolution.
+CNI - Container Network Interface specification made to drive networking communication between containers.
+
+Container building:
+Buildah - Tool used to create OCI complaint container images
+Dive - Tool to analyze containers layers and show the wasted space.
+
+Networking:
+Calico - CNI implementation
+Flannel - CNI implementation
+Canal - CNI implementation
+Weave - CNI implementation
+Istio - Kubernetes implementation of Envoy service mesh
+Linkerd - Kuberentes lightweight service mesh
+Kong - Nginx API Gateway implementation for kubernetes
+Ambassador - Envoy API Gateway implementation kubernetes
+
+Operating System:
+CoreOS - Lightweight Operating System designed to run containers.
+RancherOS - Lightweight Operating System designed to run containers.
+
+Filesystem:
+Rook - 
+Minio - 

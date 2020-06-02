@@ -6,7 +6,22 @@ patat:
 #    slideLevel: 1
 ...
 
-# Bio (who am i)
+# Bio (who am i).
+
+# A little of history about containers.
+
+# Which tools we are going to use.
+
+> * Linux (our container will be a bootstraped from Arch Linux);
+> * unshare;
+> * namespaces;
+> * cgroups;
+> * iptables;
+> * Docker (in the final we will import our container to Docker);
+
+# Advantages of using containers.
+
+# Where to use containers.
 
 # What containers are not.
 
@@ -66,7 +81,7 @@ Even if we run this with the same arguments, let's say 'file', we are going acce
 
 ## Namespaces.
 
-Each proccess its bound to a namespace of each type (mnt, pid, net, etc).
+Each process its bound to a namespace of each type (mnt, pid, net, etc).
 
 . . .
 
@@ -83,12 +98,6 @@ Each proccess its bound to a namespace of each type (mnt, pid, net, etc).
     lrwxrwxrwx 1 root root 0 fev  3 00:15 mnt -> 'mnt:[4026531840]'
     lrwxrwxrwx 1 root root 0 fev  3 00:15 ipc -> 'ipc:[4026531839]'
     lrwxrwxrwx 1 root root 0 fev  3 00:15 cgroup -> 'cgroup:[4026531835]'
-
-. . .
-
-Let's take 'net' for instance:
-
-    lrwxrwxrwx 1 root root 0 fev  3 00:15 net -> 'net:[4026532008]'
 
 ## Namespaces.
 
@@ -167,6 +176,8 @@ First thing we need is the files for the operational system.
     (11/12) Updating the info directory file...
     (12/12) Rebuilding certificate stores...
 
+Here I'm using Arch Linux pacstrap, but you could use debootstrap for debian, yum to install the base package for Centos or even apk to install alpine base package.
+
 ## Container from scratch. Exploring the jail.
 
 Now that we have our system files, we can change our root filesystem to it (we call that a jail).
@@ -244,7 +255,7 @@ But why do we see the host procceses?
 
 . . .
 
-Because we still not using namespaces, only jail. So let's add namespaces to the mix.
+Because we still using the host namespaces. So let's add new namespaces to the mix.
 
 . . .
 
@@ -285,7 +296,7 @@ Now we are going to dive a little deeper on cgroups.
 
 . . .
 
-First for CPU:
+First for CPU, let's create this directory on the host:
 
     sudo mkdir /sys/fs/cgroup/cpu/contains
 
@@ -346,14 +357,14 @@ Now, let's move the 'container' side of the virtual interface to the container n
 . . .
 
 
-Virtual interfaces come disabled, let's turn on the host side.
+Virtual interfaces come disabled, let's turn on and add an IP on the host side.
 
     sudo ip link set host up
     sudo ip add add 10.1.0.1/24 dev host
 
 . . .
 
-Then turn then on at the container side. We also add the default root pointing to the host virtual interface since it's our only way out.
+Then turn then on at the container side. We also add the default route pointing to the host virtual interface since it's our only way out.
 
     ip link set container up
     ip add add 10.1.0.2/24 dev container
@@ -375,6 +386,34 @@ Finally, on the host let's ensure we can forward network packets and that we hav
     sudo iptables -A FORWARD -o wlp3s0 -i host -j ACCEPT # Accept what comes from host interface to the virtual interface
     sudo iptables -A FORWARD -i wlp3s0 -o host -j ACCEPT # Accept what comes from virtual interface to the host interface
 
+# Wraping up
+
+## Wraping up. Installing nginx
+
+Now, to see our container in action, let's install a nginx and access it from the host through our virtual interface.
+
+. . .
+
+You may noticed that so far we didn't mount any filesystem besides the /proc (linux has a lot of mounts like /dev /sys and /run besides the user ones). So let's do it so we can install our program.
+
+    mount --bind / /
+
+    df -h
+
+. . . 
+
+    [root@StrikerEureka /]# df -h
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/sdc2       110G   99G  5.2G  96% /
+
+. . .
+
+And now let's install and start nginx.
+
+    pacman -S --noconfirm nginx
+
+    nginx
+
 # Overview
 
 ## Overview. What we done so far
@@ -386,4 +425,25 @@ Let's recap a few things.
 > * Namespaces are way of isolate a specific process within certain host resources.
 > * We can change our root directory to create a jail and use namespaces and cgroups to limit the jail context.
 > * The setup described above is essencially what we can call a container.
-> * We can create a virtual interface to connect the container and the host.
+> * We can create a virtual interface to connect the container and the host (or other containers).
+> * We can install anything in our containers as if it were a normal operational system, by using the techniques we learned we can do that in a isolated environment exposing only what we want.
+
+. . .
+
+That's a lot of stuff and concepts to grasp, no wonder we have container engines like docker, containerd or kubernetes.
+
+# Docker
+
+## Docker. Docker images
+
+Speaking of Docker, since Docker images are tarballs we can transform our newly made container into a Docker image and run it as a Docker container.
+
+. . .
+
+    sudo tar -czf system-root.tar.gz system-root # This will take a while
+
+    cat system-root.tar.gz | docker import - contains:latest # This will also take a while
+
+    docker run -d --rm -it --name contains -p 80:80 contains nginx -g 'daemon off;'
+
+    docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' contains
