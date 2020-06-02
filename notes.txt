@@ -1,3 +1,0 @@
-What are containers
-    - They are about restricting the view of the proccess.
-    - They are not real, they are a junction of namespaces and cgroups

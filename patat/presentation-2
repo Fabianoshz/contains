@@ -6,14 +6,12 @@ patat:
 #    slideLevel: 1
 ...
 
-# Bio (who am i)
-
 # What containers are not.
 
 ## What containers are not.
 
 > * They are not emulation;
-> * Containers are not VMs;
+> * Containers are not VMs (different from VMs they are as much isolated as you define);
 > * They are not an engine (altough we might use one to manage them).
 
 # What a container is?
@@ -66,7 +64,7 @@ Even if we run this with the same arguments, let's say 'file', we are going acce
 
 ## Namespaces.
 
-Each proccess its bound to a namespace of each type (mnt, pid, net, etc).
+Each proccess its bound to a namespace of each type (mnt, pid, net, etc...), and we can check which namespaces a process has by accessing the '/proc' system.
 
 . . .
 
@@ -90,9 +88,11 @@ Let's take 'net' for instance:
 
     lrwxrwxrwx 1 root root 0 fev  3 00:15 net -> 'net:[4026532008]'
 
+A package for a address inside the 'net' namespace with the ID '4026531836' can't see or access any package within the '9999999999' net namespace.
+
 ## Namespaces.
 
-Let's take a look at the processes namespaces.
+Since we are using a linux machine, we can see some of this in action, let's take a look at the processes namespaces.
 
 . . . 
 
@@ -125,13 +125,17 @@ Let's take a look at the processes namespaces.
 
 . . .
     
-Mind the column PIDNS which describes the namespace ID within in the PID namespace.
+Mind the column PIDNS which describes the namespace ID within in the PID namespace. Each namespace has its own ID, which we can use to move processes to it.
 
 # Enough talk, let's make a container from scratch!
 
 ## Container from scratch. OS files.
 
 First thing we need is the files for the operational system.
+
+. . .
+
+Each linux system has it own way of bootstrapping the OS files. We are going to use Arch pacstrap (because Arch rocks). Which will download everything we need to have a minimal Arch Linux system.
 
 . . .
 
@@ -169,11 +173,7 @@ First thing we need is the files for the operational system.
 
 ## Container from scratch. Exploring the jail.
 
-Now that we have our system files, we can change our root filesystem to it (we call that a jail).
-
-. . . 
-
-The running process can't access any file above the filesystem tree (in our case the host files).
+Now that we have our system files, we can change our root filesystem to it. That way we can have what we call a jail. The running process can't access any file above the filesystem tree (in our case the host files).
 
 . . . 
 
@@ -197,11 +197,9 @@ Now let's check the running processes:
 
     Error, do this: mount -t proc proc /proc
 
-Ops!
-
 ## Container from scratch. Procceses inside the jail.
 
-We can't see the running procceses, because they depend on /proc structure.
+We can't see the running procceses, because they depend on /proc structure. Since we don't have one for our jail we should mount a new and empty one, which the kernel will fill with the processes informations.
 
 . . .
 
@@ -244,7 +242,7 @@ But why do we see the host procceses?
 
 . . .
 
-Because we still not using namespaces, only jail. So let's add namespaces to the mix.
+Because we still not using namespaces, only jail (remember, namespaces deals with isolation in all OS aspects). So let's add namespaces to the mix.
 
 . . .
 
@@ -281,7 +279,7 @@ Finally, let's check the procceses one more time:
 
 ## Container from scratch. Cgroups (when things start to get exciting)
 
-Now we are going to dive a little deeper on cgroups.
+Now we are going to dive a little deeper on cgroups, which is responsible for resource limiting, on the host we are going to create a new cgroup for CPU and memory, we  basically need to create a new directoy and the kernel will fill it with the required files.
 
 . . .
 
@@ -314,7 +312,7 @@ Then for memory:
 
 . . .
 
-And then limit the memory amount for our newly created cgroup. Let's also remove swappiness.
+And then limit the memory amount for our newly created cgroup. Let's also remove swappiness so we can test the memory allocation later on.
 
     echo 10000000 | sudo tee /sys/fs/cgroup/memory/contains/memory.limit_in_bytes
     echo 0 | sudo tee /sys/fs/cgroup/memory/contains/memory.swappiness
@@ -326,13 +324,17 @@ Finally, let's add our container to our cgroup:
     echo $(pgrep 'bash') | sudo tee /sys/fs/cgroup/cpu/contains/cgroup.procs
     echo $(pgrep 'bash') | sudo tee /sys/fs/cgroup/memory/contains/cgroup.procs
 
+## Container from scratch. Test cgroups
+
+It's a little more hard to test CPU than it's to test memory, so to get to our point quicker, we are going to test if our process is really bound to it's group resource limit.
+
 ## Container from scratch. Network namespace
 
 Now let's make sure our container has connectivity.
 
 . . .
 
-For that we need to create a virtual interface from the host.
+For that we need to create a virtual interface from the host. A virtual interface has 2 sides, we are going to call one side 'host' and the other one 'container'.
 
     sudo ip link add name host type veth peer name container
 
@@ -381,9 +383,8 @@ Finally, on the host let's ensure we can forward network packets and that we hav
 
 Let's recap a few things.
 
-> * Containers are not VMs, emulation or engine.
+> * Containers are not VMs, emulation or engine
 > * They consist mainly of system features called namespaces and cgroups.
 > * Namespaces are way of isolate a specific process within certain host resources.
 > * We can change our root directory to create a jail and use namespaces and cgroups to limit the jail context.
 > * The setup described above is essencially what we can call a container.
-> * We can create a virtual interface to connect the container and the host.
