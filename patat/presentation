@@ -6,34 +6,35 @@ patat:
 #    slideLevel: 1
 ...
 
-# Bio (who am i).
+# Introduction
 
-# A little of history about containers.
+## Introduction. Bio (who am i).
 
-# Which tools we are going to use.
+## Introduction. A little of history about containers.
 
-> * Linux (our container will be a bootstraped from Arch Linux);
-> * unshare;
-> * namespaces;
-> * cgroups;
-> * iptables;
-> * Docker (in the final we will import our container to Docker);
+## Introduction. Which tools we are going to use.
 
-# Advantages of using containers.
+> * Linux (our container will be a bootstraped from Arch Linux)
+> * namespaces
+> * cgroups
+> * unshare
+> * iptables
+> * Docker (in the final we will import our container to Docker so we can reuse it)
 
-# Where to use containers.
+## Introduction. Advantages of using containers.
 
-# What containers are not.
+> * No operational system dependency (a container will - most of the times - behave the same under any OS)
+> * Resource optimization
+> * Scaling speed
+> * Infrastructure control
 
-## What containers are not.
+## Introduction. What containers are not.
 
 > * They are not emulation;
 > * Containers are not VMs;
 > * They are not an engine (altough we might use one to manage them).
 
-# What a container is?
-
-## What a container is?
+## Introduction. What a container is?
 
 A container is about isolating a process within certains host resources.
 
@@ -398,6 +399,8 @@ You may noticed that so far we didn't mount any filesystem besides the /proc (li
 
     mount --bind / /
 
+    rm -rf /etc/mtab && ln -s /proc/mounts /etc/mtab
+
     df -h
 
 . . . 
@@ -408,11 +411,15 @@ You may noticed that so far we didn't mount any filesystem besides the /proc (li
 
 . . .
 
-And now let's install and start nginx.
+And now let's install nginx (for now we're going to disable pacman signature validation for the sake of simplicity).
 
+    sed -i 's/SigLevel    = Required DatabaseOptional/SigLevel    = Never/' /etc/pacman.conf
     pacman -S --noconfirm nginx
 
+Finally let's start nginx in background
+
     nginx
+    ps ax -o pid,ppid,pidns,cmd --forest | grep nginx
 
 # Overview
 
@@ -426,7 +433,7 @@ Let's recap a few things.
 > * We can change our root directory to create a jail and use namespaces and cgroups to limit the jail context.
 > * The setup described above is essencially what we can call a container.
 > * We can create a virtual interface to connect the container and the host (or other containers).
-> * We can install anything in our containers as if it were a normal operational system, by using the techniques we learned we can do that in a isolated environment exposing only what we want.
+> * We can install anything in our containers as if it were a normal operational system and we can do that in a isolated environment exposing only what we want.
 
 . . .
 
@@ -434,15 +441,19 @@ That's a lot of stuff and concepts to grasp, no wonder we have container engines
 
 # Docker
 
-## Docker. Docker images
+## Docker. Images
 
 Speaking of Docker, since Docker images are tarballs we can transform our newly made container into a Docker image and run it as a Docker container.
 
 . . .
 
+Compress the container and import it as an Docker image from the host.
+
     cd system-root && sudo tar -czf ../system-root.tar.gz . # This will take a while
 
-    cat system-root.tar.gz | docker import - contains:latest # This will also take a while
+    cat ../system-root.tar.gz | docker import - contains:latest # This will also take a while
+
+Create a Docker container from the image.
 
     docker run -d --rm -it --name contains -p 80:80 contains nginx -g 'daemon off;'
 
