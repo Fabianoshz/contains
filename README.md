@@ -10,3 +10,6 @@ What containers are and are not. Why should we use containers and how does that 
 
 ### Requirements
 Basic notions of what a container is, if you run a container before it will be easier to associate the processes to your previous experience.
+
+### Running the presentation
+patat patat/presentation
