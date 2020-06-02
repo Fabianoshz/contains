@@ -144,7 +144,7 @@ First thing we need is the files for the operational system.
 
 . . .
 
-    mkdir system-root && sudo pacstrap system-root base base-devel
+    sudo mkdir system-root && sudo pacstrap system-root base base-devel
 
 . . .
 
@@ -440,7 +440,7 @@ Speaking of Docker, since Docker images are tarballs we can transform our newly 
 
 . . .
 
-    sudo tar -czf system-root.tar.gz system-root # This will take a while
+    cd system-root && sudo tar -czf ../system-root.tar.gz . # This will take a while
 
     cat system-root.tar.gz | docker import - contains:latest # This will also take a while
 
