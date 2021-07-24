@@ -1,24 +1,37 @@
 # Contains
 
-### Description
-What containers are and are not. Why should we use containers and how does that affect the way that we develop our applications? We're going to answer that by creating a container from scratch, no Docker, LXC or Podman, only Linux and a lot of faith.
+Esse tutorial é um guia de como se criar um container do zero, sem utilizar nenhuma ferramenta como Podman, Docker, Buildah ou LXC. Nenhum container criado seguindo este tutorial deve ser considerado ideal para ambientes produtivos, se você quiser ter um container confiável utilize uma das ferramentas citadas anteriormente, a ideia desse texto é te mostrar como os conceitos funcionam por "debaixo do capô" das ferramentas de mercado.
 
-### What you will do here
-- Understand following concepts:
-    - What containers are
-    - What containers are not
-    - Namespaces
-    - Cgroups
-    - Namespaces connectivity 
-- Lock a proccess in a specific directory (your jail)
-- Isolate your jail resources from your other computer processes using Linux namespaces
-- Limit your processes computer resources usage using cgroups
-- Connect different namespaces through the network
-- Expose a nginx application from your container to your host
-- Import your newly created container to Docker
+## Ferramentas
 
-### Requirements
-- Basic notions of what a containers, linux and networking
+Utilizaremos as seguinte ferramentas para criar o nosso container:
+- Linux
+- Namespaces
+- Cgroups
+- Unshare
+- Iptables
 
-### Running the presentation
-patat patat/presentation
+** Por fim importaremos o container para o Docker como uma imagem.
+
+## O que é um container
+
+Um container não é 
+
+## O que são namespaces
+
+## Arquivos iniciais
+
+## Entendendo e iniciando a jail
+
+## Processos
+
+## Namespaces
+
+## Cgroups
+
+## Rede e comunicação
+
+## Usando o container
+
+## Importando seu container para o Docker
+
